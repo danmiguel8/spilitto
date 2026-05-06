@@ -44,7 +44,6 @@ describe('simplifyDebts — soldes déjà à 0', () => {
 
 describe('simplifyDebts — 3 personnes en triangle', () => {
   it('a créditeur, c débiteur, b neutre → 1 seul settlement', () => {
-    // a=+10, b=0, c=-10  ⟹  c → a : 10
     const balances: Balances = { a: 10, b: 0, c: -10 };
     const result = simplifyDebts(balances);
 
@@ -53,7 +52,6 @@ describe('simplifyDebts — 3 personnes en triangle', () => {
   });
 
   it('3 créances croisées réduites au minimum', () => {
-    // a=+20, b=-5, c=-15 → a reçoit de b(5) et c(15) : 2 settlements
     const balances: Balances = { a: 20, b: -5, c: -15 };
     const result = simplifyDebts(balances);
 
@@ -62,17 +60,14 @@ describe('simplifyDebts — 3 personnes en triangle', () => {
   });
 });
 
-
 describe('simplifyDebts — 4 personnes, dette circulaire complexe', () => {
   it('a=+30, b=-20, c=-10, d=0 → exactement 2 settlements', () => {
     const balances: Balances = { a: 30, b: -20, c: -10, d: 0 };
     const result = simplifyDebts(balances);
 
-    // 2 settlements minimum (pas 3)
     expect(result).toHaveLength(2);
     expectAllZero(applySettlements(balances, result));
 
-    // Vérification des montants attendus
     const bToA = result.find((s) => s.from === 'b' && s.to === 'a');
     const cToA = result.find((s) => s.from === 'c' && s.to === 'a');
     expect(bToA?.amount).toBeCloseTo(20, 2);
@@ -80,8 +75,6 @@ describe('simplifyDebts — 4 personnes, dette circulaire complexe', () => {
   });
 
   it('2 créditeurs, 2 débiteurs → nombre minimal de settlements', () => {
-    // a=+50, b=+30, c=-40, d=-40
-    // Minimal = 3 settlements (pas 4)
     const balances: Balances = { a: 50, b: 30, c: -40, d: -40 };
     const result = simplifyDebts(balances);
 
@@ -90,3 +83,19 @@ describe('simplifyDebts — 4 personnes, dette circulaire complexe', () => {
   });
 });
 
+describe('simplifyDebts — arrondis et centimes', () => {
+  it('100 € ÷ 3 → settlements sans erreur flottante', () => {
+    const balances: Balances = {
+      alice:   66.67,  
+      bob:    -33.33,
+      charlie: -33.34,
+    };
+    const result = simplifyDebts(balances);
+
+    expect(result).toHaveLength(2);
+    expectAllZero(applySettlements(balances, result));
+    for (const s of result) {
+      expect(s.amount).toBeGreaterThanOrEqual(0.01);
+    }
+  });
+});
