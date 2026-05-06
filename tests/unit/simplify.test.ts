@@ -42,3 +42,23 @@ describe('simplifyDebts — soldes déjà à 0', () => {
   });
 });
 
+describe('simplifyDebts — 3 personnes en triangle', () => {
+  it('a créditeur, c débiteur, b neutre → 1 seul settlement', () => {
+    // a=+10, b=0, c=-10  ⟹  c → a : 10
+    const balances: Balances = { a: 10, b: 0, c: -10 };
+    const result = simplifyDebts(balances);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ from: 'c', to: 'a', amount: 10 });
+  });
+
+  it('3 créances croisées réduites au minimum', () => {
+    // a=+20, b=-5, c=-15 → a reçoit de b(5) et c(15) : 2 settlements
+    const balances: Balances = { a: 20, b: -5, c: -15 };
+    const result = simplifyDebts(balances);
+
+    expect(result).toHaveLength(2);
+    expectAllZero(applySettlements(balances, result));
+  });
+});
+
