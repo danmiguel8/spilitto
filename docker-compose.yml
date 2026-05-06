@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: splitto-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: splitto
+      POSTGRES_USER: splitto
+      POSTGRES_PASSWORD: splitto
+    ports:
+      - "5432:5432"
+    volumes:
+      - splitto-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U splitto"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  splitto-data:

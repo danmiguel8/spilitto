@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.stryker-tmp/
+reports/
+playwright-report/
+test-results/
+.env
+*.log
+.DS_Store
+
+# Mais ON GARDE les pacts générés
+!pacts/

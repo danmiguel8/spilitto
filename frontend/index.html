@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Splitto</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #1a1a1a;
+      background: #fafaf7;
+    }
+    h1, h2 {
+      color: #0a1628;
+      border-bottom: 3px solid #c9a84c;
+      padding-bottom: 0.5rem;
+    }
+    button {
+      background: #0a1628;
+      color: #c9a84c;
+      border: none;
+      padding: 0.7rem 1.4rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    button.secondary { background: #ddd; color: #333; }
+    button.danger { background: #c0392b; color: white; }
+    button:hover { opacity: 0.85; }
+
+    dialog {
+      border: none;
+      border-radius: 8px;
+      padding: 2rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      min-width: 450px;
+    }
+    dialog::backdrop { background: rgba(10, 22, 40, 0.6); }
+    dialog h2 { margin-top: 0; }
+    dialog form { display: flex; flex-direction: column; gap: 1rem; }
+    dialog label { display: flex; flex-direction: column; gap: 0.3rem; font-weight: bold; }
+    dialog input, dialog select, dialog textarea {
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    dialog .actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      background: white;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    th {
+      background: #0a1628;
+      color: #c9a84c;
+      padding: 0.8rem;
+      text-align: left;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+    }
+    td { padding: 0.8rem; border-bottom: 1px solid #eee; }
+    tr:last-child td { border-bottom: none; }
+
+    .balance-positive { color: #2ecc71; font-weight: bold; }
+    .balance-negative { color: #c0392b; font-weight: bold; }
+    .balance-zero { color: #888; }
+
+    .alert {
+      padding: 1rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+    }
+    .alert-error {
+      background: #fdf3f1;
+      color: #c0392b;
+      border-left: 4px solid #c0392b;
+    }
+    .alert-success {
+      background: #f0faf3;
+      color: #1e8449;
+      border-left: 4px solid #1e8449;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 2rem;
+      color: #888;
+      font-style: italic;
+    }
+
+    nav {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .group-card {
+      background: white;
+      padding: 1rem;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+    }
+    .group-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <h1>Splitto</h1>
+
+  <nav>
+    <button id="btn-home" type="button">Accueil</button>
+    <button id="btn-new-group" type="button">Nouveau groupe</button>
+  </nav>
+
+  <div role="alert" id="alert" hidden></div>
+
+  <main id="main">
+    <!-- contenu dynamique -->
+  </main>
+
+  <!-- ─── Dialog création groupe ─── -->
+  <dialog id="dlg-new-group" aria-label="Créer un groupe">
+    <h2>Nouveau groupe</h2>
+    <form id="form-new-group" method="dialog" novalidate>
+      <label>
+        Nom du groupe
+        <input name="name" id="input-group-name" required>
+      </label>
+      <label>
+        Devise
+        <select name="currency" id="input-group-currency" required>
+          <option value="EUR">EUR — Euro</option>
+          <option value="USD">USD — Dollar</option>
+          <option value="GBP">GBP — Livre</option>
+          <option value="CHF">CHF — Franc Suisse</option>
+        </select>
+      </label>
+      <label>
+        Membres (un par ligne, format : Nom &lt;email&gt;)
+        <textarea name="members" id="input-group-members" rows="4" required
+          placeholder="Alice &lt;alice@example.com&gt;&#10;Bob &lt;bob@example.com&gt;&#10;Charlie &lt;charlie@example.com&gt;"></textarea>
+      </label>
+      <div role="alert" id="alert-group" hidden></div>
+      <div class="actions">
+        <button type="button" class="secondary" id="btn-cancel-group">Annuler</button>
+        <button type="submit">Créer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ─── Dialog création dépense ─── -->
+  <dialog id="dlg-new-expense" aria-label="Ajouter une dépense">
+    <h2>Nouvelle dépense</h2>
+    <form id="form-new-expense" method="dialog" novalidate>
+      <label>
+        Description
+        <input name="description" id="input-expense-description" required>
+      </label>
+      <label>
+        Montant
+        <input name="amount" id="input-expense-amount" type="number" step="0.01" required>
+      </label>
+      <label>
+        Payé par
+        <select name="paidBy" id="input-expense-paid-by" required></select>
+      </label>
+      <label>
+        Bénéficiaires (cochez)
+        <div id="input-expense-beneficiaries"></div>
+      </label>
+      <div role="alert" id="alert-expense" hidden></div>
+      <div class="actions">
+        <button type="button" class="secondary" id="btn-cancel-expense">Annuler</button>
+        <button type="submit">Ajouter</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const API = '/api';
+
+    // ─── State applicatif ────────────────────────────────────
+    let state = {
+      view: 'home',         // 'home' | 'group'
+      currentGroup: null,
+    };
+
+    // ─── Helpers ─────────────────────────────────────────────
+    const $ = (id) => document.getElementById(id);
+
+    function showAlert(elemId, message, kind = 'error') {
+      const el = $(elemId);
+      el.textContent = message;
+      el.className = `alert alert-${kind}`;
+      el.hidden = false;
+      if (kind === 'success') {
+        setTimeout(() => { el.hidden = true; }, 3000);
+      }
+    }
+
+    function hideAlert(elemId) {
+      const el = $(elemId);
+      el.hidden = true;
+      el.textContent = '';
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+      );
+    }
+
+    function fmtMoney(amount, currency) {
+      return `${amount.toFixed(2)} ${currency}`;
+    }
+
+    function uid(prefix) {
+      return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    // ─── Vue accueil : liste des groupes ─────────────────────
+    async function renderHome() {
+      state.view = 'home';
+      try {
+        const res = await fetch(`${API}/groups`);
+        if (!res.ok) throw new Error('Erreur chargement');
+        const groups = await res.json();
+
+        $('main').innerHTML = `
+          <h2>Mes groupes</h2>
+          ${groups.length === 0
+            ? '<div class="empty">Aucun groupe pour le moment</div>'
+            : `<div role="list">${groups.map(g => `
+                <div role="listitem" class="group-card" data-group-id="${escapeHtml(g.id)}">
+                  <strong>${escapeHtml(g.name)}</strong> — ${escapeHtml(g.currency)}
+                </div>
+              `).join('')}</div>`}
+        `;
+
+        // Click handlers
+        document.querySelectorAll('[data-group-id]').forEach(el => {
+          el.addEventListener('click', () => openGroup(el.dataset.groupId));
+        });
+      } catch (err) {
+        showAlert('alert', 'Impossible de charger les groupes');
+      }
+    }
+
+    // ─── Vue détail groupe ───────────────────────────────────
+    async function openGroup(groupId) {
+      try {
+        const [groupRes, expensesRes, balancesRes] = await Promise.all([
+          fetch(`${API}/groups/${groupId}`),
+          fetch(`${API}/groups/${groupId}/expenses`),
+          fetch(`${API}/groups/${groupId}/balances`),
+        ]);
+        if (!groupRes.ok) throw new Error('Groupe introuvable');
+
+        const group = await groupRes.json();
+        const expenses = await expensesRes.json();
+        const balancesData = await balancesRes.json();
+
+        state.view = 'group';
+        state.currentGroup = group;
+
+        const memberById = Object.fromEntries(group.members.map(m => [m.id, m]));
+
+        $('main').innerHTML = `
+          <h2>${escapeHtml(group.name)} <small>(${escapeHtml(group.currency)})</small></h2>
+
+          <button id="btn-new-expense" type="button">Ajouter une dépense</button>
+
+          <h3>Dépenses</h3>
+          ${expenses.length === 0
+            ? '<div class="empty">Aucune dépense</div>'
+            : `<table aria-label="Liste des dépenses">
+                <thead>
+                  <tr><th>Description</th><th>Montant</th><th>Payé par</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                  ${expenses.map(e => `
+                    <tr>
+                      <td>${escapeHtml(e.description)}</td>
+                      <td>${fmtMoney(Number(e.amount), e.currency)}</td>
+                      <td>${escapeHtml(memberById[e.paidBy]?.name ?? e.paidBy)}</td>
+                      <td>${new Date(e.paidAt).toLocaleDateString('fr-FR')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>`}
+
+          <h3>Soldes</h3>
+          <table aria-label="Soldes des membres">
+            <thead><tr><th>Membre</th><th>Solde</th></tr></thead>
+            <tbody>
+              ${group.members.map(m => {
+                const balance = balancesData.balances[m.id] ?? 0;
+                const cls = balance > 0.01 ? 'balance-positive'
+                          : balance < -0.01 ? 'balance-negative' : 'balance-zero';
+                return `<tr>
+                  <td>${escapeHtml(m.name)}</td>
+                  <td class="${cls}" data-testid="balance-${escapeHtml(m.id)}">
+                    ${fmtMoney(balance, group.currency)}
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <h3>Règlements suggérés</h3>
+          ${balancesData.settlements.length === 0
+            ? '<div class="empty">Tous les comptes sont équilibrés</div>'
+            : `<table aria-label="Règlements">
+                <thead><tr><th>De</th><th>À</th><th>Montant</th><th>Action</th></tr></thead>
+                <tbody>
+                  ${balancesData.settlements.map((s, i) => `
+                    <tr data-testid="settlement-row-${i}">
+                      <td>${escapeHtml(memberById[s.from]?.name ?? s.from)}</td>
+                      <td>${escapeHtml(memberById[s.to]?.name ?? s.to)}</td>
+                      <td>${fmtMoney(s.amount, group.currency)}</td>
+                      <td><button class="secondary btn-settle" data-settlement-idx="${i}">Régler</button></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>`}
+        `;
+
+        $('btn-new-expense').addEventListener('click', () => openNewExpenseDialog(group));
+
+        document.querySelectorAll('.btn-settle').forEach(btn => {
+          btn.addEventListener('click', () => {
+            // Settle = simulation côté client : on retire la ligne
+            const idx = Number(btn.dataset.settlementIdx);
+            const row = document.querySelector(`[data-testid="settlement-row-${idx}"]`);
+            if (row) row.remove();
+            showAlert('alert', 'Règlement marqué comme effectué', 'success');
+          });
+        });
+      } catch (err) {
+        showAlert('alert', err.message);
+      }
+    }
+
+    // ─── Dialog : nouveau groupe ─────────────────────────────
+    $('btn-new-group').addEventListener('click', () => {
+      hideAlert('alert-group');
+      $('form-new-group').reset();
+      $('dlg-new-group').showModal();
+    });
+    $('btn-cancel-group').addEventListener('click', () => $('dlg-new-group').close());
+
+    $('form-new-group').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alert-group');
+
+      const name = $('input-group-name').value.trim();
+      const currency = $('input-group-currency').value;
+      const membersText = $('input-group-members').value.trim();
+
+      if (!name) return showAlert('alert-group', 'Le nom est requis');
+      if (!membersText) return showAlert('alert-group', 'Au moins un membre est requis');
+
+      const members = membersText.split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+          const m = line.match(/^(.+?)\s*<(.+?)>$/);
+          if (!m) return null;
+          return { id: uid('m'), name: m[1].trim(), email: m[2].trim() };
+        })
+        .filter(Boolean);
+
+      if (members.length === 0) {
+        return showAlert('alert-group', 'Format invalide. Utilisez : Nom <email>');
+      }
+
+      const group = { id: uid('g'), name, currency, members };
+
+      try {
+        const res = await fetch(`${API}/groups`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(group),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return showAlert('alert-group', err.error || 'Erreur lors de la création');
+        }
+        $('dlg-new-group').close();
+        await renderHome();
+      } catch (err) {
+        showAlert('alert-group', 'Erreur réseau');
+      }
+    });
+
+    // ─── Dialog : nouvelle dépense ───────────────────────────
+    function openNewExpenseDialog(group) {
+      hideAlert('alert-expense');
+      $('form-new-expense').reset();
+
+      // Remplir le select payeur
+      const paidBySelect = $('input-expense-paid-by');
+      paidBySelect.innerHTML = group.members.map(m =>
+        `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`
+      ).join('');
+
+      // Remplir les checkboxes bénéficiaires
+      const benefDiv = $('input-expense-beneficiaries');
+      benefDiv.innerHTML = group.members.map(m => `
+        <label style="font-weight:normal;flex-direction:row;align-items:center">
+          <input type="checkbox" name="beneficiary" value="${escapeHtml(m.id)}" checked>
+          ${escapeHtml(m.name)}
+        </label>
+      `).join('');
+
+      $('dlg-new-expense').showModal();
+    }
+
+    $('btn-cancel-expense').addEventListener('click', () => $('dlg-new-expense').close());
+
+    $('form-new-expense').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alert-expense');
+
+      const description = $('input-expense-description').value.trim();
+      const amount = parseFloat($('input-expense-amount').value);
+      const paidBy = $('input-expense-paid-by').value;
+      const beneficiaries = Array.from(document.querySelectorAll('input[name="beneficiary"]:checked'))
+        .map(el => el.value);
+
+      if (!description) return showAlert('alert-expense', 'La description est requise');
+      if (!amount || amount <= 0) return showAlert('alert-expense', 'Le montant doit être positif');
+      if (beneficiaries.length === 0) return showAlert('alert-expense', 'Au moins un bénéficiaire');
+
+      const expense = {
+        id: uid('e'),
+        description,
+        amount,
+        currency: state.currentGroup.currency,
+        paidBy,
+        paidAt: new Date().toISOString(),
+        split: { mode: 'equal', beneficiaries },
+      };
+
+      try {
+        const res = await fetch(`${API}/groups/${state.currentGroup.id}/expenses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(expense),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return showAlert('alert-expense', err.error || 'Erreur lors de la création');
+        }
+        $('dlg-new-expense').close();
+        await openGroup(state.currentGroup.id);
+      } catch (err) {
+        showAlert('alert-expense', 'Erreur réseau');
+      }
+    });
+
+    // ─── Navigation ──────────────────────────────────────────
+    $('btn-home').addEventListener('click', () => renderHome());
+
+    // ─── Démarrage ───────────────────────────────────────────
+    renderHome();
+  </script>
+</body>
+</html>
