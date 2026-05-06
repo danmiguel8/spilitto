@@ -62,3 +62,31 @@ describe('simplifyDebts — 3 personnes en triangle', () => {
   });
 });
 
+
+describe('simplifyDebts — 4 personnes, dette circulaire complexe', () => {
+  it('a=+30, b=-20, c=-10, d=0 → exactement 2 settlements', () => {
+    const balances: Balances = { a: 30, b: -20, c: -10, d: 0 };
+    const result = simplifyDebts(balances);
+
+    // 2 settlements minimum (pas 3)
+    expect(result).toHaveLength(2);
+    expectAllZero(applySettlements(balances, result));
+
+    // Vérification des montants attendus
+    const bToA = result.find((s) => s.from === 'b' && s.to === 'a');
+    const cToA = result.find((s) => s.from === 'c' && s.to === 'a');
+    expect(bToA?.amount).toBeCloseTo(20, 2);
+    expect(cToA?.amount).toBeCloseTo(10, 2);
+  });
+
+  it('2 créditeurs, 2 débiteurs → nombre minimal de settlements', () => {
+    // a=+50, b=+30, c=-40, d=-40
+    // Minimal = 3 settlements (pas 4)
+    const balances: Balances = { a: 50, b: 30, c: -40, d: -40 };
+    const result = simplifyDebts(balances);
+
+    expect(result.length).toBeLessThanOrEqual(3);
+    expectAllZero(applySettlements(balances, result));
+  });
+});
+
