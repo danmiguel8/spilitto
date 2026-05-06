@@ -99,3 +99,34 @@ describe('simplifyDebts — arrondis et centimes', () => {
     }
   });
 });
+
+describe('simplifyDebts — cas limites', () => {
+  it('balances vides → aucun settlement', () => {
+    expect(simplifyDebts({})).toHaveLength(0);
+  });
+
+  it('un seul membre avec solde 0 → aucun settlement', () => {
+    expect(simplifyDebts({ alice: 0 })).toHaveLength(0);
+  });
+
+  it('chaque settlement a un montant strictement positif', () => {
+    const balances: Balances = { a: 100, b: -60, c: -40 };
+    const result = simplifyDebts(balances);
+    for (const s of result) {
+      expect(s.amount).toBeGreaterThan(0);
+    }
+  });
+
+  it('les settlements soldent toujours exactement le groupe (propriété générale)', () => {
+    const balances: Balances = { a: 150, b: -80, c: 30, d: -70, e: -30 };
+    const result = simplifyDebts(balances);
+    expectAllZero(applySettlements(balances, result));
+  });
+
+  it('groupe avec un seul créditeur et plusieurs débiteurs', () => {
+    const balances: Balances = { a: 90, b: -30, c: -30, d: -30 };
+    const result = simplifyDebts(balances);
+    expect(result).toHaveLength(3);
+    expectAllZero(applySettlements(balances, result));
+  });
+});
