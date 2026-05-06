@@ -34,3 +34,11 @@ describe('simplifyDebts — 2 personnes', () => {
   });
 });
 
+describe('simplifyDebts — soldes déjà à 0', () => {
+  it('aucun mouvement nécessaire → aucun settlement', () => {
+    const balances: Balances = { a: 0, b: 0, c: 0 };
+    const result = simplifyDebts(balances);
+    expect(result).toHaveLength(0);
+  });
+});
+
