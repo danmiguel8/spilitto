@@ -6,10 +6,6 @@ balances.ts : ~65%
 simplify.ts  : ~60%
 
 
-Scores estimés sur la base des cas couverts avant l'exo 7.
-Remplacez par les valeurs réelles du rapport HTML Stryker.
-
-
 Score final
 Après amélioration des tests :
 
